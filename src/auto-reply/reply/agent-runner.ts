@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { logVerbose } from "../../globals.js";
+import { getLogger } from "../../logging/logger.js";
 import { lookupContextTokens } from "../../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import { resolveModelAuthMode } from "../../agents/model-auth.js";
@@ -159,10 +160,10 @@ export async function runReplyAgent(params: {
         })
       : null;
 
-  logVerbose(`[TRACE] Steer check: shouldSteer=${shouldSteer} isStreaming=${isStreaming} isActive=${isActive} shouldFollowup=${shouldFollowup}`);
+  getLogger().info(`[TRACE] Steer check: shouldSteer=${shouldSteer} isStreaming=${isStreaming} isActive=${isActive} shouldFollowup=${shouldFollowup}`);
   if (shouldSteer && isStreaming) {
     const steered = queueEmbeddedPiMessage(followupRun.run.sessionId, followupRun.prompt);
-    logVerbose(`[TRACE] Steer attempted: steered=${steered}`);
+    getLogger().info(`[TRACE] Steer attempted: steered=${steered}`);
     if (steered && !shouldFollowup) {
       if (activeSessionEntry && activeSessionStore && sessionKey) {
         const updatedAt = Date.now();
@@ -182,7 +183,7 @@ export async function runReplyAgent(params: {
   }
 
   if (isActive && (shouldFollowup || resolvedQueue.mode === "steer")) {
-    logVerbose(`[TRACE] ENQUEUEING to followup queue: queueKey=${queueKey}`);
+    getLogger().info(`[TRACE] ENQUEUEING to followup queue: queueKey=${queueKey}`);
     enqueueFollowupRun(queueKey, followupRun, resolvedQueue);
     if (activeSessionEntry && activeSessionStore && sessionKey) {
       const updatedAt = Date.now();
@@ -200,7 +201,7 @@ export async function runReplyAgent(params: {
     return undefined;
   }
 
-  logVerbose(`[TRACE] IMMEDIATE PATH - not enqueued, running agent directly`);
+  getLogger().info(`[TRACE] IMMEDIATE PATH - not enqueued, running agent directly`);
   await typingSignals.signalRunStart();
 
   activeSessionEntry = await runMemoryFlushIfNeeded({

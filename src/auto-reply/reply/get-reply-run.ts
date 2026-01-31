@@ -15,6 +15,7 @@ import {
   updateSessionStore,
 } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
+import { getLogger } from "../../logging/logger.js";
 import { clearCommandLane, getQueueSize } from "../../process/command-queue.js";
 import { normalizeMainKey } from "../../routing/session-key.js";
 import { isReasoningTagProvider } from "../../utils/provider-utils.js";
@@ -336,11 +337,11 @@ export async function runPreparedReply(
 
   // Notify user when their message is queued behind active tasks
   const isBusy = isActive || laneSize > 0;
-  logVerbose(`Queue check: isActive=${isActive} laneSize=${laneSize} isBusy=${isBusy} mode=${resolvedQueue.mode}`);
+  getLogger().info(`[TRACE] Queue check: isActive=${isActive} laneSize=${laneSize} isBusy=${isBusy} mode=${resolvedQueue.mode} sessionId=${sessionIdFinal}`);
   if (isBusy && resolvedQueue.mode !== "interrupt") {
     const notifyChannel = ctx.OriginatingChannel || (command.channel as any);
     const notifyTo = ctx.OriginatingTo || command.from || command.to;
-    logVerbose(`Queue notify: channel=${notifyChannel} to=${notifyTo}`);
+    getLogger().info(`[TRACE] Queue notify: channel=${notifyChannel} to=${notifyTo}`);
     if (notifyChannel && notifyTo) {
       const queuedAhead = laneSize + (isActive ? 1 : 0);
       const queueText =
