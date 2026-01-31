@@ -50,9 +50,8 @@ export function abortEmbeddedPiRun(sessionId: string): boolean {
 
 export function isEmbeddedPiRunActive(sessionId: string): boolean {
   const active = ACTIVE_EMBEDDED_RUNS.has(sessionId);
-  if (active) {
-    diag.debug(`run active check: sessionId=${sessionId} active=true`);
-  }
+  // Always log for tracing, not just when active
+  diag.debug(`[TRACE] isEmbeddedPiRunActive: sessionId=${sessionId} active=${active} totalActiveRuns=${ACTIVE_EMBEDDED_RUNS.size}`);
   return active;
 }
 

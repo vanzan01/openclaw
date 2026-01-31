@@ -718,7 +718,9 @@ export async function runEmbeddedAttempt(
 
         // Repair orphaned trailing user messages so new prompts don't violate role ordering.
         const leafEntry = sessionManager.getLeafEntry();
+        log.info(`[TRACE] Orphan check: leafType=${leafEntry?.type} leafRole=${leafEntry?.type === "message" ? leafEntry.message.role : "n/a"} runId=${params.runId} sessionId=${params.sessionId}`);
         if (leafEntry?.type === "message" && leafEntry.message.role === "user") {
+          log.warn(`[TRACE] REMOVING orphaned user message! runId=${params.runId} sessionId=${params.sessionId}`);
           if (leafEntry.parentId) {
             sessionManager.branch(leafEntry.parentId);
           } else {

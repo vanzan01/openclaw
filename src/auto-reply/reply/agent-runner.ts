@@ -158,8 +158,10 @@ export async function runReplyAgent(params: {
         })
       : null;
 
+  logVerbose(`[TRACE] Steer check: shouldSteer=${shouldSteer} isStreaming=${isStreaming} isActive=${isActive} shouldFollowup=${shouldFollowup}`);
   if (shouldSteer && isStreaming) {
     const steered = queueEmbeddedPiMessage(followupRun.run.sessionId, followupRun.prompt);
+    logVerbose(`[TRACE] Steer attempted: steered=${steered}`);
     if (steered && !shouldFollowup) {
       if (activeSessionEntry && activeSessionStore && sessionKey) {
         const updatedAt = Date.now();
@@ -179,6 +181,7 @@ export async function runReplyAgent(params: {
   }
 
   if (isActive && (shouldFollowup || resolvedQueue.mode === "steer")) {
+    logVerbose(`[TRACE] ENQUEUEING to followup queue: queueKey=${queueKey}`);
     enqueueFollowupRun(queueKey, followupRun, resolvedQueue);
     if (activeSessionEntry && activeSessionStore && sessionKey) {
       const updatedAt = Date.now();
@@ -196,6 +199,7 @@ export async function runReplyAgent(params: {
     return undefined;
   }
 
+  logVerbose(`[TRACE] IMMEDIATE PATH - not enqueued, running agent directly`);
   await typingSignals.signalRunStart();
 
   activeSessionEntry = await runMemoryFlushIfNeeded({
