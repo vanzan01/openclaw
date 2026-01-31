@@ -5,6 +5,8 @@ import { createSubsystemLogger } from "../logging/subsystem.js";
 
 const log = createSubsystemLogger("telegram/trace");
 
+let telegramMsgSeq = 0;
+
 export const createTelegramMessageProcessor = (deps) => {
   const {
     bot,
@@ -30,7 +32,9 @@ export const createTelegramMessageProcessor = (deps) => {
   } = deps;
 
   return async (primaryCtx, allMedia, storeAllowFrom, options) => {
-    log.info(`[TRACE] Telegram processMessage called`);
+    const seq = ++telegramMsgSeq;
+    const msgId = primaryCtx?.message?.message_id ?? "?";
+    log.info(`[TRACE] Telegram processMessage START seq=${seq} msgId=${msgId}`);
     const context = await buildTelegramMessageContext({
       primaryCtx,
       allMedia,
@@ -51,6 +55,7 @@ export const createTelegramMessageProcessor = (deps) => {
       resolveTelegramGroupConfig,
     });
     if (!context) return;
+    log.info(`[TRACE] Telegram dispatchTelegramMessage START seq=${seq} msgId=${msgId}`);
     await dispatchTelegramMessage({
       context,
       bot,
@@ -63,5 +68,6 @@ export const createTelegramMessageProcessor = (deps) => {
       opts,
       resolveBotTopicsEnabled,
     });
+    log.info(`[TRACE] Telegram dispatchTelegramMessage END seq=${seq} msgId=${msgId}`);
   };
 };

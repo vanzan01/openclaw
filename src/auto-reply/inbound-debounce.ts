@@ -34,6 +34,10 @@ type DebounceBuffer<T> = {
   timeout: ReturnType<typeof setTimeout> | null;
 };
 
+import { createSubsystemLogger } from "../logging/subsystem.js";
+
+const debounceLog = createSubsystemLogger("auto-reply/debounce");
+
 export function createInboundDebouncer<T>(params: {
   debounceMs: number;
   buildKey: (item: T) => string | null | undefined;
@@ -45,6 +49,7 @@ export function createInboundDebouncer<T>(params: {
   const debounceMs = Math.max(0, Math.trunc(params.debounceMs));
 
   const flushBuffer = async (key: string, buffer: DebounceBuffer<T>) => {
+    debounceLog.info(`[TRACE] flushBuffer START: key=${key.slice(-20)} count=${buffer.items.length}`);
     buffers.delete(key);
     if (buffer.timeout) {
       clearTimeout(buffer.timeout);
@@ -53,7 +58,9 @@ export function createInboundDebouncer<T>(params: {
     if (buffer.items.length === 0) return;
     try {
       await params.onFlush(buffer.items);
+      debounceLog.info(`[TRACE] flushBuffer END: key=${key.slice(-20)} count=${buffer.items.length}`);
     } catch (err) {
+      debounceLog.info(`[TRACE] flushBuffer ERROR: key=${key.slice(-20)} err=${String(err).slice(0, 50)}`);
       params.onError?.(err, buffer.items);
     }
   };
@@ -76,21 +83,28 @@ export function createInboundDebouncer<T>(params: {
     const key = params.buildKey(item);
     const canDebounce = debounceMs > 0 && (params.shouldDebounce?.(item) ?? true);
 
+    debounceLog.info(`[TRACE] enqueue: key=${key?.slice(-20) ?? "null"} canDebounce=${canDebounce} debounceMs=${debounceMs}`);
+
     if (!canDebounce || !key) {
       if (key && buffers.has(key)) {
+        debounceLog.info(`[TRACE] enqueue: AWAIT flushKey (pending buffer exists)`);
         await flushKey(key);
       }
+      debounceLog.info(`[TRACE] enqueue: AWAIT onFlush (direct)`);
       await params.onFlush([item]);
+      debounceLog.info(`[TRACE] enqueue: DONE (direct)`);
       return;
     }
 
     const existing = buffers.get(key);
     if (existing) {
+      debounceLog.info(`[TRACE] enqueue: ADD to existing buffer (count=${existing.items.length + 1})`);
       existing.items.push(item);
       scheduleFlush(key, existing);
       return;
     }
 
+    debounceLog.info(`[TRACE] enqueue: NEW buffer created`);
     const buffer: DebounceBuffer<T> = { items: [item], timeout: null };
     buffers.set(key, buffer);
     scheduleFlush(key, buffer);

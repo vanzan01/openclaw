@@ -11,6 +11,9 @@ import { resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { loadConfig } from "../config/config.js";
 import { writeConfigFile } from "../config/io.js";
 import { danger, logVerbose, warn } from "../globals.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+
+const handlerLog = createSubsystemLogger("telegram/trace");
 import { resolveMedia } from "./bot/delivery.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { resolveTelegramForumThreadId } from "./bot/helpers.js";
@@ -76,8 +79,10 @@ export const registerTelegramHandlers = ({
     onFlush: async (entries) => {
       const last = entries.at(-1);
       if (!last) return;
+      handlerLog.info(`[TRACE] debouncer onFlush START count=${entries.length} msgId=${last.msg.message_id}`);
       if (entries.length === 1) {
         await processMessage(last.ctx, last.allMedia, last.storeAllowFrom);
+        handlerLog.info(`[TRACE] debouncer onFlush END count=1 msgId=${last.msg.message_id}`);
         return;
       }
       const combinedText = entries
@@ -104,6 +109,7 @@ export const registerTelegramHandlers = ({
         first.storeAllowFrom,
         messageIdOverride ? { messageIdOverride } : undefined,
       );
+      handlerLog.info(`[TRACE] debouncer onFlush END count=${entries.length} msgId=${last.msg.message_id}`);
     },
     onError: (err) => {
       runtime.error?.(danger(`telegram debounce flush failed: ${String(err)}`));
@@ -673,6 +679,7 @@ export const registerTelegramHandlers = ({
       const debounceKey = senderId
         ? `telegram:${accountId ?? "default"}:${conversationKey}:${senderId}`
         : null;
+      handlerLog.info(`[TRACE] bot.on(message) ENQUEUE START msgId=${msg.message_id} debounceKey=${debounceKey}`);
       await inboundDebouncer.enqueue({
         ctx,
         msg,
@@ -681,6 +688,7 @@ export const registerTelegramHandlers = ({
         debounceKey,
         botUsername: ctx.me?.username,
       });
+      handlerLog.info(`[TRACE] bot.on(message) ENQUEUE END msgId=${msg.message_id}`);
     } catch (err) {
       runtime.error?.(danger(`handler failed: ${String(err)}`));
     }
