@@ -20,6 +20,7 @@ import { resolveTelegramDraftStreamingChunking } from "./draft-chunking.js";
 import { createTelegramDraftStream } from "./draft-stream.js";
 import { cacheSticker, describeStickerImage } from "./sticker-cache.js";
 import { resolveAgentDir } from "../agents/agent-scope.js";
+import { getLogger } from "../logging/logger.js";
 
 const EMPTY_RESPONSE_FALLBACK = "No response generated. Please try again.";
 
@@ -209,6 +210,7 @@ export const dispatchTelegramMessage = async ({
     skippedNonSilent: 0,
   };
 
+  getLogger().info(`[TRACE] Telegram dispatch: chatId=${chatId} isGroup=${isGroup}`);
   const { queuedFinal } = await dispatchReplyWithBufferedBlockDispatcher({
     ctx: ctxPayload,
     cfg,
