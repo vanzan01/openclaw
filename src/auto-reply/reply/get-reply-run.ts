@@ -333,6 +333,33 @@ export async function runPreparedReply(
   const queueKey = sessionKey ?? sessionIdFinal;
   const isActive = isEmbeddedPiRunActive(sessionIdFinal);
   const isStreaming = isEmbeddedPiRunStreaming(sessionIdFinal);
+
+  // Notify user when their message is queued behind active tasks
+  const isBusy = isActive || laneSize > 0;
+  if (isBusy && resolvedQueue.mode !== "interrupt") {
+    const notifyChannel = ctx.OriginatingChannel || (command.channel as any);
+    const notifyTo = ctx.OriginatingTo || command.from || command.to;
+    if (notifyChannel && notifyTo) {
+      const queuedAhead = laneSize + (isActive ? 1 : 0);
+      const queueText =
+        queuedAhead === 1
+          ? "📋 Your message is queued (1 task ahead)"
+          : `📋 Your message is queued (${queuedAhead} tasks ahead)`;
+      void routeReply({
+        payload: { text: queueText },
+        channel: notifyChannel,
+        to: notifyTo,
+        sessionKey,
+        accountId: ctx.AccountId,
+        threadId: ctx.MessageThreadId,
+        cfg,
+        mirror: false,
+      }).catch(() => {
+        // Ignore notification failures - don't block the main flow
+      });
+    }
+  }
+
   const shouldSteer = resolvedQueue.mode === "steer" || resolvedQueue.mode === "steer-backlog";
   const shouldFollowup =
     resolvedQueue.mode === "followup" ||
