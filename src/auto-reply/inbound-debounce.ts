@@ -90,9 +90,10 @@ export function createInboundDebouncer<T>(params: {
         debounceLog.info(`[TRACE] enqueue: AWAIT flushKey (pending buffer exists)`);
         await flushKey(key);
       }
-      debounceLog.info(`[TRACE] enqueue: AWAIT onFlush (direct)`);
-      await params.onFlush([item]);
-      debounceLog.info(`[TRACE] enqueue: DONE (direct)`);
+      // When debounceMs=0, fire-and-forget to allow concurrent processing
+      // Only await when debouncing is active (to preserve order within debounce window)
+      debounceLog.info(`[TRACE] enqueue: FIRE-AND-FORGET onFlush (no debounce)`);
+      void params.onFlush([item]).catch((err) => params.onError?.(err, [item]));
       return;
     }
 
