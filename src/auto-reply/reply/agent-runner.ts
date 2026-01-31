@@ -1,7 +1,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { logVerbose } from "../../globals.js";
-import { getLogger } from "../../logging/logger.js";
+import { createSubsystemLogger } from "../../logging/subsystem.js";
+
+const log = createSubsystemLogger("auto-reply/trace");
 import { lookupContextTokens } from "../../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS } from "../../agents/defaults.js";
 import { resolveModelAuthMode } from "../../agents/model-auth.js";
@@ -160,10 +162,10 @@ export async function runReplyAgent(params: {
         })
       : null;
 
-  getLogger().info(`[TRACE] Steer check: shouldSteer=${shouldSteer} isStreaming=${isStreaming} isActive=${isActive} shouldFollowup=${shouldFollowup}`);
+  log.info(`[TRACE] Steer check: shouldSteer=${shouldSteer} isStreaming=${isStreaming} isActive=${isActive} shouldFollowup=${shouldFollowup}`);
   if (shouldSteer && isStreaming) {
     const steered = queueEmbeddedPiMessage(followupRun.run.sessionId, followupRun.prompt);
-    getLogger().info(`[TRACE] Steer attempted: steered=${steered}`);
+    log.info(`[TRACE] Steer attempted: steered=${steered}`);
     if (steered && !shouldFollowup) {
       if (activeSessionEntry && activeSessionStore && sessionKey) {
         const updatedAt = Date.now();
@@ -183,7 +185,7 @@ export async function runReplyAgent(params: {
   }
 
   if (isActive && (shouldFollowup || resolvedQueue.mode === "steer")) {
-    getLogger().info(`[TRACE] ENQUEUEING to followup queue: queueKey=${queueKey}`);
+    log.info(`[TRACE] ENQUEUEING to followup queue: queueKey=${queueKey}`);
     enqueueFollowupRun(queueKey, followupRun, resolvedQueue);
     if (activeSessionEntry && activeSessionStore && sessionKey) {
       const updatedAt = Date.now();
@@ -201,7 +203,7 @@ export async function runReplyAgent(params: {
     return undefined;
   }
 
-  getLogger().info(`[TRACE] IMMEDIATE PATH - not enqueued, running agent directly`);
+  log.info(`[TRACE] IMMEDIATE PATH - not enqueued, running agent directly`);
   await typingSignals.signalRunStart();
 
   activeSessionEntry = await runMemoryFlushIfNeeded({

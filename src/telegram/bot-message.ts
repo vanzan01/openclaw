@@ -1,7 +1,9 @@
 // @ts-nocheck
 import { buildTelegramMessageContext } from "./bot-message-context.js";
 import { dispatchTelegramMessage } from "./bot-message-dispatch.js";
-import { getLogger } from "../logging/logger.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+
+const log = createSubsystemLogger("telegram/trace");
 
 export const createTelegramMessageProcessor = (deps) => {
   const {
@@ -28,7 +30,7 @@ export const createTelegramMessageProcessor = (deps) => {
   } = deps;
 
   return async (primaryCtx, allMedia, storeAllowFrom, options) => {
-    getLogger().info(`[TRACE] Telegram processMessage called`);
+    log.info(`[TRACE] Telegram processMessage called`);
     const context = await buildTelegramMessageContext({
       primaryCtx,
       allMedia,
