@@ -144,6 +144,41 @@ export function createTelegramBot(opts: TelegramBotOptions) {
 
   const bot = new Bot(opts.token, client ? { client } : undefined);
   bot.api.config.use(apiThrottler());
+
+  // Track active message handlers per chat to detect queued messages
+  const processingByKey = new Map<string, number>();
+
+  // Queue detection middleware - runs BEFORE sequentialize
+  // Sends notification when a message is queued behind an active handler
+  bot.use(async (ctx, next) => {
+    const key = getTelegramSequentialKey(ctx);
+    const activeCount = processingByKey.get(key) ?? 0;
+
+    if (activeCount > 0 && ctx.message) {
+      // Fire-and-forget notification - don't block the pipeline
+      void ctx
+        .reply(`📋 Your message is queued (${activeCount} ahead)...`, {
+          reply_parameters: { message_id: ctx.message.message_id },
+          message_thread_id: ctx.message.message_thread_id,
+        })
+        .catch(() => {
+          // Ignore notification failures
+        });
+    }
+
+    processingByKey.set(key, activeCount + 1);
+    try {
+      await next();
+    } finally {
+      const newCount = (processingByKey.get(key) ?? 1) - 1;
+      if (newCount <= 0) {
+        processingByKey.delete(key);
+      } else {
+        processingByKey.set(key, newCount);
+      }
+    }
+  });
+
   bot.use(sequentialize(getTelegramSequentialKey));
   bot.catch((err) => {
     runtime.error?.(danger(`telegram bot error: ${formatUncaughtError(err)}`));
